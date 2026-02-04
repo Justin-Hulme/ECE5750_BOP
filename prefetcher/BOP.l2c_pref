@@ -2,6 +2,8 @@
 #include <string.h>
 
 #include "BOP/direct_map_RR_table.h"
+#include "BOP/full_associative_RR_table.h"
+#include "BOP/RR_table.h"
 
 #define STARTING_D 1
 #define RR_TABLE_SIZE 256
@@ -47,23 +49,6 @@ uint32_t CACHE::l2c_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t 
 void CACHE::l2c_prefetcher_final_stats()
 {
     cout << "CPU " << cpu << " L2C next line prefetcher final stats" << endl;
-}
-
-void add_to_RR_table(uint64_t address){
-    uint8_t address_hash = hash_address(address);
-
-    RR_table[address_hash] = address;
-}
-
-bool exists_in_RR_table(uint64_t address){
-
-}
-
-uint8_t hash_address(uint64_t address){
-    uint8_t lower_8 = address & 0xFF;
-    uint8_t next_lower_8 = (address >> 8) & 0xFF;
-
-    return lower_8 ^ next_lower_8;
 }
 
 /*
