@@ -9,3 +9,7 @@ inc/champsim.h.bak
 
 bin/
 obj/
+
+.vscode/
+dpc3_traces/
+results_10M

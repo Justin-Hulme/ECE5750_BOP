@@ -1,0 +1,120 @@
+#include "cache.h"
+#include <string.h>
+
+#include "BOP/direct_map_RR_table.h"
+
+#define STARTING_D 1
+#define RR_TABLE_SIZE 256
+
+uint64_t D;
+
+void CACHE::l2c_prefetcher_initialize() 
+{
+    cout << "CPU " << cpu << " L2C next line prefetcher" << endl;
+
+    D = STARTING_D;
+}
+
+uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, uint32_t metadata_in)
+{
+    uint64_t pf_addr_1 = ((addr>>LOG2_BLOCK_SIZE)+1) << LOG2_BLOCK_SIZE;
+    uint64_t pf_addr_2 = ((addr>>LOG2_BLOCK_SIZE)+2) << LOG2_BLOCK_SIZE;
+    uint64_t pf_addr_3 = ((addr>>LOG2_BLOCK_SIZE)+3) << LOG2_BLOCK_SIZE;
+    uint64_t pf_addr_4 = ((addr>>LOG2_BLOCK_SIZE)+4) << LOG2_BLOCK_SIZE;
+
+    DP ( if (warmup_complete[cpu]) {
+        cout << "[" << NAME << "] " << __func__ << hex << " base_cl: " << (addr>>LOG2_BLOCK_SIZE);
+        cout << " pf_cl: " << (pf_addr_1>>LOG2_BLOCK_SIZE) << " ip: " << ip << " cache_hit: " << +cache_hit << " type: " << +type << endl; 
+    });
+
+    prefetch_line(ip, addr, pf_addr_1, FILL_L2, 0);
+    prefetch_line(ip, addr, pf_addr_2, FILL_L2, 0);
+    prefetch_line(ip, addr, pf_addr_3, FILL_L2, 0);
+    prefetch_line(ip, addr, pf_addr_3, FILL_L2, 0);
+
+    return metadata_in;
+}
+
+uint32_t CACHE::l2c_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
+{
+    uint64_t Y = addr;
+
+    // uint64_t  
+
+    return metadata_in;
+}
+
+void CACHE::l2c_prefetcher_final_stats()
+{
+    cout << "CPU " << cpu << " L2C next line prefetcher final stats" << endl;
+}
+
+void add_to_RR_table(uint64_t address){
+    uint8_t address_hash = hash_address(address);
+
+    RR_table[address_hash] = address;
+}
+
+bool exists_in_RR_table(uint64_t address){
+
+}
+
+uint8_t hash_address(uint64_t address){
+    uint8_t lower_8 = address & 0xFF;
+    uint8_t next_lower_8 = (address >> 8) & 0xFF;
+
+    return lower_8 ^ next_lower_8;
+}
+
+/*
+filling RR table (cache fill)
+    If receive data from L3 and data was prefetched then
+        let y = addr of data
+        if Y and Y-D like in the same page then
+            store Y-D in RR table
+        end
+    end
+
+start phase (cache operate)
+    for round_i in Learning Phase:
+        for d_i in potential offsets
+            wait for next cache access
+            let X = addr of access
+            if x-d_i is in RR then
+                increment d_i.score
+                if d_i score is SCORE_MAX then
+                    update D to d_i
+                    set all d_i score to 0
+                    GOTO start phase
+                end
+            end
+        end
+        if round_i is ROUND_MAX then:
+            if the best score is not greater than BAD_SCORE then
+                set D to 0
+            else
+                set D to max(d_i)
+            end
+            set all d_i score to 0
+        end
+    end
+
+prefetching (cache operate)
+    if received req. for x in K2 then
+        if miss or prefetch hit then
+            if x and x+D is same page then
+                prefetch X+D
+            end
+        end
+    end
+
+*/
+
+/*
+RR_table
+
+load data in
+
+check if something is in table
+
+*/
