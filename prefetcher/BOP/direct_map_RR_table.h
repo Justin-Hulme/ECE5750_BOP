@@ -13,7 +13,7 @@ class DirectMapRRTable : public RRTable {
         void insert(uint64_t address) override;
         bool exists(uint64_t address) override;
     private:
-        static constexpr uint16_t m_table_size = (1U << table_addr_width) - 1;
+        static constexpr uint16_t m_table_size = (1U << table_addr_width);
         uint16_t hash_address(uint64_t address);
         uint64_t m_RR_table[m_table_size] = {};
 };
