@@ -13,3 +13,4 @@ obj/
 .vscode/
 dpc3_traces/
 results_10M
+prefetcher/BOP/a.out

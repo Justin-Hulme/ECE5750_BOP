@@ -6,7 +6,14 @@
 #include "BOP/RR_table.h"
 
 #define STARTING_D 1
-#define RR_TABLE_SIZE 256
+#define RR_TABLE_ADDR_WIDTH 8
+
+#ifdef ASSOCIATIVE
+    FullyAssociativeRRTable<RR_TABLE_ADDR_WIDTH, 2> RR_table;
+#else
+    DirectMapRRTable<RR_TABLE_ADDR_WIDTH> RR_table;
+#endif
+
 
 uint64_t D;
 
@@ -39,10 +46,16 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
 
 uint32_t CACHE::l2c_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
 {
-    uint64_t Y = addr;
+    if (prefetch) 
+    {
+        uint64_t Y = addr;
 
-    // uint64_t  
-
+        if (/*Y and Y-D in the same page*/0)
+        {
+            RR_table.insert(Y-D);
+        }
+    }
+    
     return metadata_in;
 }
 
