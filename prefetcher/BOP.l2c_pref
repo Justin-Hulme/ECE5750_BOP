@@ -45,8 +45,8 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
 
     if (RR_table.exists(X-current_offset))
     {
-        bool overflow = offset_scoreboard.inc_score(current_offset);
-        if (overflow)
+        bool score_too_high = offset_scoreboard.inc_score(current_offset);
+        if (score_too_high)
         {
             offset_scoreboard.reset_scores();
             current_round = 1;
