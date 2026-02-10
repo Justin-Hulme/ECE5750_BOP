@@ -9,6 +9,10 @@
 #define STARTING_D 1
 #define RR_TABLE_ADDR_WIDTH 8
 
+#define SCOREMAX 31
+#define ROUNDMAX 100
+#define BADSCORE 1
+
 #ifdef ASSOCIATIVE
     FullyAssociativeRRTable<RR_TABLE_ADDR_WIDTH, 2> RR_table;
 #else
