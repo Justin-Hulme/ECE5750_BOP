@@ -3,10 +3,6 @@
 
 #include <stdint.h>
 
-#define SCOREMAX 31
-#define ROUNDMAX 100
-#define BADSCORE 1
-
 class OffsetScoreboard{
     public:
         OffsetScoreboard(uint16_t scoremax, uint16_t badscore);
