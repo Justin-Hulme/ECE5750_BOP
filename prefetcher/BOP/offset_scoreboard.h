@@ -11,9 +11,9 @@
 class OffsetScoreboard{
     public:
         OffsetScoreboard();
-        bool inc_score(uint64_t d);
         void reset_scores();
-        uint64_t get_best_offset();
+        bool inc_score(uint64_t d);
+        bool get_best_offset(uint64_t &best_offset);
 
         static const uint64_t POTENTIAL_OFFSETS[] = {1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 
                                                 15, 16, 18, 20, 24, 25, 27, 3, 
@@ -35,6 +35,14 @@ OffsetScoreboard::OffsetScoreboard()
     }
 }
 
+void OffsetScoreboard::reset_scores() 
+{
+    for (uint64_t &score : m_scores) 
+    {
+        score = 0;
+    }
+}
+
 bool OffsetScoreboard::inc_score(uint64_t offset_idx) 
 /**
  * increment offset score
@@ -46,20 +54,13 @@ bool OffsetScoreboard::inc_score(uint64_t offset_idx)
     return (m_scores[offset_idx] >= SCOREMAX);
 }
 
-void OffsetScoreboard::reset_scores() 
-{
-    for (uint64_t &score : m_scores) 
-    {
-        score = 0;
-    }
-}
-
-uint64_t OffsetScoreboard::get_best_offset()
+bool t OffsetScoreboard::get_best_offset(uint64_t &best_offset)
 /**
- * Returns the offset with the highest score;
+ * Calculates the best offset which is passed by reference as a parameter
+ * Returns true if the best score is less than or equal to BADSCORE else false
  */
 {
-    uint64_t best_offset = 1;
+    best_offset = 1;
     uint16_t best_score = 0;
 
     for (int ix = 0; idx < NUM_OFFSETS; idx++)
@@ -71,7 +72,7 @@ uint64_t OffsetScoreboard::get_best_offset()
         }
     }
 
-    return best_offset;
+    return (best_score <= BADSCORE);
 }
 
 #endif

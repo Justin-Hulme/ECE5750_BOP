@@ -49,7 +49,8 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
         bool score_too_high = offset_scoreboard.inc_score(current_offset_idx);
         if (score_too_high)
         {
-            D = (best_score >= BADSCORE) ?  best_score : 0;
+            // SCOREMAX has been surpassed. End round, move to next phase.
+            D = (best_score > BADSCORE) ?  best_score : 0;
 
             offset_scoreboard.reset_scores();
             current_round = 1;
@@ -66,15 +67,17 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
 
         if(current_round >= ROUNDMAX)
         {
-            uint64_t best_score = offset_scoreboard.get_best_offset();
+            uint64_t best_offset;
+            
+            bool score_too_low = offset_scoreboard.get_best_offset(best_offset);
 
-            D = (best_score >= BADSCORE) ?  best_score : 0;
+            D = (score_too_low) ?  0 : best_offset;
 
             offset_scoreboard.reset_scores();
             current_round = 1;
         }
     }
-
+ 
 
     prefetch_line(ip, addr, pf_addr_1, FILL_L2, 0);
 
