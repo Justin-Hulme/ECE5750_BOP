@@ -43,9 +43,10 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
 
     uint64_t X = addr;
 
-    if (RR_table.exists(X-[current_offset_idx]))
+    if (RR_table.exists(X - [
+POTENTIAL_OFFSETS[current_offset_idx]))
     {
-        bool score_too_high = offset_scoreboard.inc_score([current_offset_idx]);
+        bool score_too_high = offset_scoreboard.inc_score(POTENTIAL_OFFSETS[current_offset_idx]);
         if (score_too_high)
         {
             offset_scoreboard.reset_scores();
