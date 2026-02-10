@@ -2,7 +2,6 @@
 #define OFFSET_SCOREBOARD_H
 
 #include <stdint.h>
-#include <map>
 
 #define SCOREMAX 31
 #define ROUNDMAX 100
