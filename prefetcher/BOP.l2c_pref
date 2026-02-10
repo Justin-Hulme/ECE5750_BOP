@@ -43,25 +43,28 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
 
     uint64_t X = addr;
 
-    if (RR_table.exists(X - [
-POTENTIAL_OFFSETS[current_offset_idx]))
+    // Update score of current offset
+    if (RR_table.exists(X - offset_scoreboard.POTENTIAL_OFFSETS[current_offset_idx]))
     {
-        bool score_too_high = offset_scoreboard.inc_score(POTENTIAL_OFFSETS[current_offset_idx]);
+        bool score_too_high = offset_scoreboard.inc_score(current_offset_idx);
         if (score_too_high)
         {
+            D = (best_score >= BADSCORE) ?  best_score : 0;
+
             offset_scoreboard.reset_scores();
             current_round = 1;
+            current_offset_idx = 0;
         }
     }
 
-
+    // Move to next offset, next round, or next phase
     current_offset_idx++;
-    if (current_offset_idx == NUM_OFFSETS)
+    if (current_offset_idx >= offset_scoreboard.NUM_OFFSETS)
     {
         current_offset_idx = 0;
         current_round++;
 
-        if(current_round == ROUNDMAX)
+        if(current_round >= ROUNDMAX)
         {
             uint64_t best_score = offset_scoreboard.get_best_offset();
 
