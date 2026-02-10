@@ -15,7 +15,7 @@
     DirectMapRRTable<RR_TABLE_ADDR_WIDTH> RR_table;
 #endif
 
-OffsetScoreboard offset_scoreboard;
+OffsetScoreboard offset_scoreboard(SCOREMAX, BADSCORE);
 
 uint64_t D;
 uint64_t current_round;
