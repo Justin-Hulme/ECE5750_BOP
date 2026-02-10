@@ -24,11 +24,15 @@ class OffsetScoreboard{
 
     private:
         uint64_t m_scores[NUM_OFFSETS];
+        
+        uint16_t M_SCOREMAX;
+        uint16_t M_BADSCORE;
 };
 
-OffsetScoreboard::OffsetScoreboard() 
+OffsetScoreboard::OffsetScoreboard(uint16_t scoremax, uint16_t badscore) 
 {
-    
+    M_SCOREMAX = scoremax;
+    M_BADSCORE = badscore;
 }
 
 void OffsetScoreboard::reset_scores() 
@@ -47,7 +51,7 @@ bool OffsetScoreboard::inc_score(uint64_t offset_idx)
 {
     m_scores[offset_idx]++;
 
-    return (m_scores[offset_idx] >= SCOREMAX);
+    return (m_scores[offset_idx] >= M_SCOREMAX);
 }
 
 bool OffsetScoreboard::get_best_offset(uint64_t &best_offset)
@@ -68,7 +72,7 @@ bool OffsetScoreboard::get_best_offset(uint64_t &best_offset)
         }
     }
 
-    return (best_score <= BADSCORE);
+    return (best_score <= M_BADSCORE);
 }
 
 #endif
