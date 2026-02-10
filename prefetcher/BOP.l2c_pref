@@ -50,7 +50,10 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
         if (score_too_high)
         {
             // SCOREMAX has been surpassed. End round, move to next phase.
-            D = (best_score > BADSCORE) ?  best_score : 0;
+            uint64_t best_offset;
+
+            bool score_too_low = offset_scoreboard.get_best_offset(best_offset);
+            D = (score_too_low) ?  0 : best_offset;
 
             offset_scoreboard.reset_scores();
             current_round = 1;

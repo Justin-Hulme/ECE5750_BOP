@@ -54,9 +54,9 @@ bool OffsetScoreboard::inc_score(uint64_t offset_idx)
     return (m_scores[offset_idx] >= SCOREMAX);
 }
 
-bool t OffsetScoreboard::get_best_offset(uint64_t &best_offset)
+bool OffsetScoreboard::get_best_offset(uint64_t &best_offset)
 /**
- * Calculates the best offset which is passed by reference as a parameter
+ * Calculates the best offset which is passed by reference as an argument
  * Returns true if the best score is less than or equal to BADSCORE else false
  */
 {
