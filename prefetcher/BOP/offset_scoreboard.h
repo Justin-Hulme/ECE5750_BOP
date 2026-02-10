@@ -29,10 +29,7 @@ class OffsetScoreboard{
 
 OffsetScoreboard::OffsetScoreboard() 
 {
-    for (uint64_t &score : m_scores) 
-    {
-        score = 0;
-    }
+    
 }
 
 void OffsetScoreboard::reset_scores() 
