@@ -9,7 +9,7 @@
 
 class OffsetScoreboard{
     public:
-        OffsetScoreboard();
+        OffsetScoreboard(uint16_t scoremax, uint16_t badscore);
         void reset_scores();
         bool inc_score(uint64_t d);
         bool get_best_offset(uint64_t &best_offset);
