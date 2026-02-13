@@ -10,13 +10,13 @@ class OffsetScoreboard{
         bool inc_score(uint64_t d);
         bool get_best_offset(uint64_t &best_offset);
 
-        static const uint64_t POTENTIAL_OFFSETS[] = {1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 
+        inline static const uint64_t POTENTIAL_OFFSETS[] = {1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 
                                                 15, 16, 18, 20, 24, 25, 27, 3, 
-                                                32, 36, 40, 45, 48, 50, 54, 60, 
+                                                32, 36, 40, 45, 48, 50, 54, 60/*, 
                                                 64, 72, 75, 80, 81, 90, 96, 100, 
-                                                108, 120, 125};
+                                                108, 120, 125*/};
 
-        static constexpr uint16_t NUM_OFFSETS = sizeof(potential_offsets) / sizeof(potential_offsets[0]);
+        static constexpr uint16_t NUM_OFFSETS = sizeof(POTENTIAL_OFFSETS) / sizeof(POTENTIAL_OFFSETS[0]);
 
     private:
         uint64_t m_scores[NUM_OFFSETS];
@@ -47,6 +47,8 @@ bool OffsetScoreboard::inc_score(uint64_t offset_idx)
 {
     m_scores[offset_idx]++;
 
+    cout << "incremented " << offset_idx << endl;
+
     return (m_scores[offset_idx] >= M_SCOREMAX);
 }
 
@@ -56,17 +58,22 @@ bool OffsetScoreboard::get_best_offset(uint64_t &best_offset)
  * Returns true if the best score is less than or equal to BADSCORE else false
  */
 {
-    best_offset = 1;
-    uint16_t best_score = 0;
+    best_offset = POTENTIAL_OFFSETS[0];
+    uint16_t best_score = m_scores[0];
 
-    for (int ix = 0; idx < NUM_OFFSETS; idx++)
+    cout << "m_scores [" ;
+
+    for (int idx = 0; idx < NUM_OFFSETS; idx++)
     {
-        if (scores[idx] > best_score) 
+        cout << m_scores[idx] << ", ";
+        if (m_scores[idx] > best_score) 
         {
-            best_score = scores[idx];
-            best_offset = potential_offsets[idx];
+            best_score = m_scores[idx];
+            best_offset = POTENTIAL_OFFSETS[idx];
         }
     }
+
+    cout << "]" << endl;
 
     return (best_score <= M_BADSCORE);
 }

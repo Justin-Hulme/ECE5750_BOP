@@ -9,12 +9,16 @@
 #define STARTING_D 1
 #define RR_TABLE_ADDR_WIDTH 8
 
+#define TABLE_OFFSET_WIDTH 12
+
 #define SCOREMAX 31
 #define ROUNDMAX 100
 #define BADSCORE 1
 
+// #define ASSOCIATIVE
+
 #ifdef ASSOCIATIVE
-    FullyAssociativeRRTable<RR_TABLE_ADDR_WIDTH, 2> RR_table;
+    FullyAssociativeRRTable<RR_TABLE_ADDR_WIDTH, 3> RR_table;
 #else
     DirectMapRRTable<RR_TABLE_ADDR_WIDTH> RR_table;
 #endif
@@ -24,6 +28,13 @@ OffsetScoreboard offset_scoreboard(SCOREMAX, BADSCORE);
 uint64_t D;
 uint64_t current_round;
 uint64_t current_offset_idx;
+
+bool same_page(uint64_t cur_addr, uint64_t pref_addr){
+    uint64_t addr_page = cur_addr >> LOG2_PAGE_SIZE;
+    uint64_t pref_page = pref_addr >> LOG2_PAGE_SIZE;
+
+    return addr_page == pref_page;
+}
 
 void CACHE::l2c_prefetcher_initialize() 
 {
@@ -38,14 +49,41 @@ void CACHE::l2c_prefetcher_initialize()
 
 uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, uint32_t metadata_in)
 {
-    uint64_t pf_addr_1 = ((addr>>LOG2_BLOCK_SIZE)+1) << LOG2_BLOCK_SIZE;
+    uint64_t X = addr;
+    uint64_t XD = X + D;
 
     DP ( if (warmup_complete[cpu]) {
         cout << "[" << NAME << "] " << __func__ << hex << " base_cl: " << (addr>>LOG2_BLOCK_SIZE);
-        cout << " pf_cl: " << (pf_addr_1>>LOG2_BLOCK_SIZE) << " ip: " << ip << " cache_hit: " << +cache_hit << " type: " << +type << endl; 
+        cout << " pf_cl: " << (XD>>LOG2_BLOCK_SIZE) << " ip: " << ip << " cache_hit: " << +cache_hit << " type: " << +type << endl; 
     });
 
-    uint64_t X = addr;
+    if (!cache_hit || /*prefetch hit*/0)
+    {
+        if (same_page(X, XD))
+        {
+            prefetch_line(ip, addr, X + D, FILL_L2, 0);
+            
+            //cout << "prefetched" << endl;
+
+            if (true)//prefetch) 
+            {
+                uint64_t Y = addr;
+                uint64_t YD = Y-D;
+                /*
+                uint64_t page_table_mask = ~((1U << RR_TABLE_ADDR_WIDTH) - 1);
+                if ((Y & page_table_mask) == (YD & page_table_mask))
+                {
+                    RR_table.insert(YD);
+                }
+                */
+                if ((Y>>TABLE_OFFSET_WIDTH) == (YD>>TABLE_OFFSET_WIDTH))
+                {
+                    RR_table.insert(YD);
+                }
+            }
+            // cout << "prefetching. D = " << D << endl;
+        }
+    }
 
     // Update score of current offset
     if (RR_table.exists(X - offset_scoreboard.POTENTIAL_OFFSETS[current_offset_idx]))
@@ -59,6 +97,8 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
             bool score_too_low = offset_scoreboard.get_best_offset(best_offset);
             D = (score_too_low) ?  0 : best_offset;
 
+            cout << "(79) new D = " << D << endl;
+
             offset_scoreboard.reset_scores();
             current_round = 1;
             current_offset_idx = 0;
@@ -67,6 +107,7 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
 
     // Move to next offset, next round, or next phase
     current_offset_idx++;
+    // cout << "current_offset_idx " << current_offset_idx << " | " << offset_scoreboard.NUM_OFFSETS << endl;
     if (current_offset_idx >= offset_scoreboard.NUM_OFFSETS)
     {
         current_offset_idx = 0;
@@ -80,13 +121,12 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
 
             D = (score_too_low) ?  0 : best_offset;
 
+            cout << "(100) new D = " << D << endl;
+
             offset_scoreboard.reset_scores();
             current_round = 1;
         }
     }
- 
-
-    prefetch_line(ip, addr, pf_addr_1, FILL_L2, 0);
 
     return metadata_in;
 }
@@ -102,18 +142,23 @@ uint32_t CACHE::l2c_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t 
  *  end
  */
 {
-    if (prefetch) 
-    {
-        uint64_t Y = addr;
-        uint64_T YD = Y-D;
-
-        page_table_mask = ~((1U << table_addr_width) - 1);
-        if ((Y & page_table_mask) == (YD & page_table_mask))
-        {
-            RR_table.insert(YD);
-        }
-    }
-    
+    // the TA didn't use this
+    // if (prefetch) 
+    // {
+    //     uint64_t Y = addr;
+    //     uint64_t YD = Y-D;
+    //     /*
+    //     uint64_t page_table_mask = ~((1U << RR_TABLE_ADDR_WIDTH) - 1);
+    //     if ((Y & page_table_mask) == (YD & page_table_mask))
+    //     {
+    //         RR_table.insert(YD);
+    //     }
+    //     */
+    //     if ((Y>>TABLE_OFFSET_WIDTH) == (YD>>TABLE_OFFSET_WIDTH))
+    //     {
+    //         RR_table.insert(YD);
+    //     }
+    // }
     return metadata_in;
 }
 

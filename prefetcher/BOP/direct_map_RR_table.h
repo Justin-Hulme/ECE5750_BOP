@@ -25,12 +25,16 @@ template <uint8_t table_addr_width>
 void DirectMapRRTable<table_addr_width>::insert(uint64_t address){
     uint16_t address_hash = hash_address(address);
 
+    // cout << "direct map insert " << address << endl;
+
     m_RR_table[address_hash] = address;
 }
 
 template <uint8_t table_addr_width>
 bool DirectMapRRTable<table_addr_width>::exists(uint64_t address){
     uint16_t address_hash = hash_address(address);
+
+    cout << address << "does " << (m_RR_table[address_hash] == address ? "in fact " : "not ") << "exist" << endl;
 
     return m_RR_table[address_hash] == address;
 }
