@@ -1,13 +1,16 @@
 #include "cache.h"
 #include <string.h>
 
-#include "BOP/direct_map_RR_table.h"
-#include "BOP/full_associative_RR_table.h"
-#include "BOP/RR_table.h"
+// #include "BOP/direct_map_RR_table.h"
+// #include "BOP/full_associative_RR_table.h"
+// #include "BOP/RR_table.h"
 #include "BOP/offset_scoreboard.h"
 
+#include <map>
+#include <vector>
+
 #define STARTING_D 1
-#define RR_TABLE_ADDR_WIDTH 8
+#define RR_TABLE_ADDR_WIDTH 16
 
 #define TABLE_OFFSET_WIDTH 12
 
@@ -17,17 +20,47 @@
 
 // #define ASSOCIATIVE
 
-#ifdef ASSOCIATIVE
-    FullyAssociativeRRTable<RR_TABLE_ADDR_WIDTH, 3> RR_table;
-#else
-    DirectMapRRTable<RR_TABLE_ADDR_WIDTH> RR_table;
-#endif
+// #ifdef ASSOCIATIVE
+//     FullyAssociativeRRTable<RR_TABLE_ADDR_WIDTH, 3> RR_table;
+// #else
+//     DirectMapRRTable<RR_TABLE_ADDR_WIDTH> RR_table;
+// #endif
+
+std::map<uint64_t, uint64_t> RR_table;
+
+uint64_t hash_addr(uint64_t address){
+    uint16_t lower = address & ((1U << RR_TABLE_ADDR_WIDTH) - 1);
+    uint16_t next_lower = (address >> RR_TABLE_ADDR_WIDTH) & ((1U << RR_TABLE_ADDR_WIDTH) - 1);
+
+    return lower ^ next_lower;
+}
+
+bool exists(uint64_t address){
+    uint64_t hash_val = hash_addr(address);
+
+    auto find_val = RR_table.find(hash_val);
+
+    if (find_val == RR_table.end()){
+        // hash not in table
+        return false;
+    }
+    else {
+        return find_val->second == address;
+    }
+}
+
+void insert(uint64_t address){
+    uint64_t hash_val = hash_addr(address);
+
+    RR_table[hash_val] = address;
+}
 
 OffsetScoreboard offset_scoreboard(SCOREMAX, BADSCORE);
 
 uint64_t D;
 uint64_t current_round;
 uint64_t current_offset_idx;
+vector<uint64_t> prefetched;
 
 bool same_page(uint64_t cur_addr, uint64_t pref_addr){
     uint64_t addr_page = cur_addr >> LOG2_PAGE_SIZE;
@@ -38,6 +71,7 @@ bool same_page(uint64_t cur_addr, uint64_t pref_addr){
 
 void CACHE::l2c_prefetcher_initialize() 
 {
+    // set up global variables
     cout << "CPU " << cpu << " L2C next line prefetcher" << endl;
 
     D = STARTING_D;
@@ -49,44 +83,41 @@ void CACHE::l2c_prefetcher_initialize()
 
 uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, uint32_t metadata_in)
 {
-    uint64_t X = addr;
-    uint64_t XD = X + D;
+    // from L1
 
+    // chap sim stuff
     DP ( if (warmup_complete[cpu]) {
         cout << "[" << NAME << "] " << __func__ << hex << " base_cl: " << (addr>>LOG2_BLOCK_SIZE);
         cout << " pf_cl: " << (XD>>LOG2_BLOCK_SIZE) << " ip: " << ip << " cache_hit: " << +cache_hit << " type: " << +type << endl; 
     });
 
-    if (!cache_hit || /*prefetch hit*/0)
+    // get X
+    uint64_t X = addr;
+    uint64_t XD = X + D;
+
+    // if this is a miss or a or a prefetched hit
+    if (!cache_hit || metadata_in == 1) // don't know how to check if prefetched
     {
+        // and if X and X+D lie in the same memort page
         if (same_page(X, XD))
         {
             prefetch_line(ip, addr, X + D, FILL_L2, 0);
-            
-            //cout << "prefetched" << endl;
 
-            if (true)//prefetch) 
-            {
-                uint64_t Y = addr;
-                uint64_t YD = Y-D;
-                /*
-                uint64_t page_table_mask = ~((1U << RR_TABLE_ADDR_WIDTH) - 1);
-                if ((Y & page_table_mask) == (YD & page_table_mask))
-                {
-                    RR_table.insert(YD);
-                }
-                */
-                if ((Y>>TABLE_OFFSET_WIDTH) == (YD>>TABLE_OFFSET_WIDTH))
-                {
-                    RR_table.insert(YD);
-                }
-            }
-            // cout << "prefetching. D = " << D << endl;
+            // if (true)//prefetch) 
+            // {
+            //     uint64_t Y = addr;
+            //     uint64_t YD = Y-D;
+
+            //     if (same_page(Y, YD));
+            //     {
+            //         insert(YD);
+            //     }
+            // }
         }
     }
 
     // Update score of current offset
-    if (RR_table.exists(X - offset_scoreboard.POTENTIAL_OFFSETS[current_offset_idx]))
+    if (exists(X - offset_scoreboard.POTENTIAL_OFFSETS[current_offset_idx]))
     {
         bool score_too_high = offset_scoreboard.inc_score(current_offset_idx);
         if (score_too_high)
