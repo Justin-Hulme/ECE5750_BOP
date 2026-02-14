@@ -1,11 +1,6 @@
 #include "cache.h"
 #include <string.h>
 
-// #include "BOP/direct_map_RR_table.h"
-// #include "BOP/full_associative_RR_table.h"
-// #include "BOP/RR_table.h"
-#include "BOP/offset_scoreboard.h"
-
 #include <map>
 #include <vector>
 
@@ -18,13 +13,7 @@
 #define ROUNDMAX 100
 #define BADSCORE 1
 
-// #define ASSOCIATIVE
-
-// #ifdef ASSOCIATIVE
-//     FullyAssociativeRRTable<RR_TABLE_ADDR_WIDTH, 3> RR_table;
-// #else
-//     DirectMapRRTable<RR_TABLE_ADDR_WIDTH> RR_table;
-// #endif
+#include "BOP/offset_scoreboard.h"
 
 std::map<uint64_t, uint64_t> RR_table;
 
@@ -91,105 +80,61 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
         cout << " pf_cl: " << (XD>>LOG2_BLOCK_SIZE) << " ip: " << ip << " cache_hit: " << +cache_hit << " type: " << +type << endl; 
     });
 
-    // get X
-    uint64_t X = addr;
-    uint64_t XD = X + D;
+    uint64_t X = addr >> LOG2_BLOCK_SIZE;
 
     // if this is a miss or a or a prefetched hit
     if (!cache_hit || metadata_in == 1) // don't know how to check if prefetched
     {
         // and if X and X+D lie in the same memort page
-        if (same_page(X, XD))
+        if (same_page(X, X + D) && D != 0)
         {
-            prefetch_line(ip, addr, X + D, FILL_L2, 0);
-
-            // if (true)//prefetch) 
-            // {
-            //     uint64_t Y = addr;
-            //     uint64_t YD = Y-D;
-
-            //     if (same_page(Y, YD));
-            //     {
-            //         insert(YD);
-            //     }
-            // }
+            prefetch_line(ip, addr, (X + D) << LOG2_BLOCK_SIZE, FILL_L2, 0);
         }
     }
 
-    // Update score of current offset
-    if (exists(X - offset_scoreboard.POTENTIAL_OFFSETS[current_offset_idx]))
+    uint64_t d_i = offset_scoreboard.POTENTIAL_OFFSETS[current_offset_idx];
+
+    // if X-d_i hits in the RR table
+    if (exists(X - d_i))
     {
-        bool score_too_high = offset_scoreboard.inc_score(current_offset_idx);
-        if (score_too_high)
-        {
-            // SCOREMAX has been surpassed. End round, move to next phase.
-            uint64_t best_offset;
-
-            bool score_too_low = offset_scoreboard.get_best_offset(best_offset);
-            D = (score_too_low) ?  0 : best_offset;
-
-            cout << "(79) new D = " << D << endl;
-
-            offset_scoreboard.reset_scores();
-            current_round = 1;
-            current_offset_idx = 0;
-        }
+        // the score of offset d_i is incremented
+        offset_scoreboard.inc_score(current_offset_idx);
     }
 
-    // Move to next offset, next round, or next phase
+    // during a round, each offset is tested once
     current_offset_idx++;
-    // cout << "current_offset_idx " << current_offset_idx << " | " << offset_scoreboard.NUM_OFFSETS << endl;
     if (current_offset_idx >= offset_scoreboard.NUM_OFFSETS)
     {
+        // when all the offsets in the list have been tested, the current round is finished and a new round begins from offset d1 again
         current_offset_idx = 0;
         current_round++;
+    }
 
-        if(current_round >= ROUNDMAX)
-        {
-            uint64_t best_offset;
-            
-            bool score_too_low = offset_scoreboard.get_best_offset(best_offset);
+    // the current learning phase finishes at the end of a round whe one of the scores equals SCOREMAX or the number of rounds equals ROUNDMAX
+    if(current_round >= ROUNDMAX || offset_scoreboard.any_at_max())
+    {
+        // when the learning phase is finished, we search the best offset
+        uint64_t best_offset;
+        uint16_t best_score = offset_scoreboard.get_best_offset(best_offset);
 
-            D = (score_too_low) ?  0 : best_offset;
+        // this offset becomes the new prefetch offset
+        D = (best_score <= BADSCORE) ?  0 : best_offset;
 
-            cout << "(100) new D = " << D << endl;
-
-            offset_scoreboard.reset_scores();
-            current_round = 1;
-        }
+        // and a new learning phase starts
+        offset_scoreboard.reset_scores();
+        current_round = 1;
     }
 
     return metadata_in;
 }
 
 uint32_t CACHE::l2c_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr, uint32_t metadata_in)
-/**
- * Pseudocode:
- *  If receive data from L3 and data was prefetched then
- *      let y = addr of data
- *      If Y and Y-D like in the same page then
- *          store Y-D in RR table
- *      end
- *  end
- */
 {
-    // the TA didn't use this
-    // if (prefetch) 
-    // {
-    //     uint64_t Y = addr;
-    //     uint64_t YD = Y-D;
-    //     /*
-    //     uint64_t page_table_mask = ~((1U << RR_TABLE_ADDR_WIDTH) - 1);
-    //     if ((Y & page_table_mask) == (YD & page_table_mask))
-    //     {
-    //         RR_table.insert(YD);
-    //     }
-    //     */
-    //     if ((Y>>TABLE_OFFSET_WIDTH) == (YD>>TABLE_OFFSET_WIDTH))
-    //     {
-    //         RR_table.insert(YD);
-    //     }
-    // }
+    uint64_t Y = addr >> LOG2_BLOCK_SIZE;
+
+    // for every prefetched line Y inserted into the L2, we write address Y-D into the RR table
+    insert(Y - D);
+
     return metadata_in;
 }
 
@@ -197,49 +142,3 @@ void CACHE::l2c_prefetcher_final_stats()
 {
     cout << "CPU " << cpu << " L2C next line prefetcher final stats" << endl;
 }
-
-/*
-
-start phase (cache operate)
-    for round_i in Learning Phase:
-        for d_i in potential offsets
-            wait for next cache access
-            let X = addr of access
-            if x-d_i is in RR then
-                increment d_i.score
-                if d_i score is SCORE_MAX then
-                    update D to d_i
-                    set all d_i score to 0
-                    GOTO start phase
-                end
-            end
-        end
-        if round_i is ROUND_MAX then:
-            if the best score is not greater than BAD_SCORE then
-                set D to 0
-            else
-                set D to max(d_i)
-            end
-            set all d_i score to 0
-        end
-    end
-
-prefetching (cache operate)
-    if received req. for x in K2 then
-        if miss or prefetch hit then
-            if x and x+D is same page then
-                prefetch X+D
-            end
-        end
-    end
-
-*/
-
-/*
-RR_table
-
-load data in
-
-check if something is in table
-
-*/
