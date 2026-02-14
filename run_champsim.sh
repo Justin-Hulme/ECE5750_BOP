@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# echo "RUNNING CHAMPSIM SCRIPT"
+# echo "ARGS: $@"
+# pwd
+
 if [ "$#" -lt 4 ]; then
     echo "Illegal number of parameters"
     echo "Usage: ./run_champsim.sh [BINARY] [N_WARM] [N_SIM] [TRACE] [OPTION]"

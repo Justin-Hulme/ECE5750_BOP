@@ -1,6 +1,7 @@
 import subprocess
 import re
 import csv
+import os
 
 bins = ["perceptron-no-no-BOP-no-ship-1core"]
 
@@ -34,7 +35,9 @@ for trace in traces:
         print(f"running {trace} with bin {bin}")
         result_file = f"results_50M/{trace}-{bin}.txt"
 
-        subprocess.run(["./run_champsim.sh", bin, "1", "10", trace], check=True)
+        if not os.path.exists(result_file):
+            result = subprocess.run(["./run_champsim.sh", bin, "1", "50", trace], check=True)
+            # print(result.returncode)
 
         data = {
             "trace": trace,
