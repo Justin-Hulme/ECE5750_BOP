@@ -17,11 +17,11 @@
 
 std::map<uint64_t, uint64_t> RR_table;
 
-uint64_t hash_addr(uint64_t address){
-    uint16_t lower = address & ((1U << RR_TABLE_ADDR_WIDTH) - 1);
-    uint16_t next_lower = (address >> RR_TABLE_ADDR_WIDTH) & ((1U << RR_TABLE_ADDR_WIDTH) - 1);
-
-    return lower ^ next_lower;
+uint64_t hash_addr(uint64_t address) {
+    address ^= (address >> 33);
+    address *= 0xff51afd7ed558ccdULL;
+    address ^= (address >> 33);
+    return address & ((1 << RR_TABLE_ADDR_WIDTH) - 1);
 }
 
 bool exists(uint64_t address){
@@ -83,9 +83,9 @@ uint32_t CACHE::l2c_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache
     uint64_t X = addr >> LOG2_BLOCK_SIZE;
 
     // if this is a miss or a or a prefetched hit
-    if (!cache_hit || metadata_in == 1) // don't know how to check if prefetched
+    if (!cache_hit) // don't know how to check if prefetched
     {
-        // and if X and X+D lie in the same memort page
+        // and if X and X+D lie in the same memory page
         if (same_page(X, X + D) && D != 0)
         {
             prefetch_line(ip, addr, (X + D) << LOG2_BLOCK_SIZE, FILL_L2, 0);
@@ -133,7 +133,12 @@ uint32_t CACHE::l2c_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t 
     uint64_t Y = addr >> LOG2_BLOCK_SIZE;
 
     // for every prefetched line Y inserted into the L2, we write address Y-D into the RR table
-    insert(Y - D);
+    if (D != 0 && prefetch){
+        insert(Y - D);
+    }
+    else if (D == 0 && !prefetch){
+        insert(Y);
+    }
 
     return metadata_in;
 }

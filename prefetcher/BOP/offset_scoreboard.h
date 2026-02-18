@@ -58,14 +58,20 @@ uint16_t OffsetScoreboard::get_best_offset(uint64_t &best_offset)
     best_offset = POTENTIAL_OFFSETS[0];
     uint16_t best_score = m_scores[0];
 
+    cout << "best_score =[";
+
     for (int idx = 0; idx < NUM_OFFSETS; idx++)
     {
+        cout << m_scores[idx] << ", ";
+        
         if (m_scores[idx] > best_score) 
         {
             best_score = m_scores[idx];
             best_offset = POTENTIAL_OFFSETS[idx];
         }
     }
+
+    cout << "]" << endl;
 
     return best_score;
 }
